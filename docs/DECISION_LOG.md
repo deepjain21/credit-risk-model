@@ -254,5 +254,7 @@ knob so the business can set it from an expected-cost curve.
 1. **Censored `Active` loans** — a survival model would use the ~5k loans we
    currently discard and likely improve ranking.
 
-4. **Feature depth** — bureau trend features (score movement across pulls) and
+2. **Feature depth** — bureau trend features (score movement across pulls) and
    affordability vs product interest band are promising and unused.
+
+3. **CI/CD pipelin** : automate the ci/cd pipeline on github using github actions functionality.
