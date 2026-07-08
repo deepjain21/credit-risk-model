@@ -1,0 +1,5 @@
+product_id,product_name,interest_rate_band,max_term_months
+PRD-01,Personal Loan Standard,18-22%,60
+PRD-02,Personal Loan Plus,14-18%,60
+PRD-03,Salary Advance,22-26%,12
+PRD-04,Debt Consolidation Loan,12-16%,60

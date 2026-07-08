@@ -1,0 +1,99 @@
+# ---------------------------------------------------------------------------
+# Central configuration for the personal-loan default-risk pipeline.
+# Everything a reviewer might want to change lives here, not in the code.
+# ---------------------------------------------------------------------------
+
+project:
+  name: personal-loan-default-risk
+  random_seed: 42
+
+paths:
+  artifacts_dir: artifacts # model-ready dataset + saved model live here
+  model_file: artifacts/model.joblib
+  dataset_file: artifacts/model_ready.parquet
+
+# Raw source files ----------------------------------------------------------
+sources:
+  applications: data/applications.csv
+  customers: data/customers.json
+  bureau: data/bureau_pulls.jsonl
+  repayments: data/repayments.csv
+  servicing: data/loan_servicing.csv
+  products: data/products.csv
+  branches: data/branches.csv
+
+# Target definition ---------------------------------------------------------
+# A loan is "bad" (default=1) if it was written off / formally defaulted, OR
+# it ever reached 90+ days past due. Loans still "Active" have not matured and
+# are EXCLUDED from the labelled set. See docs/DECISION_LOG.md for rationale.
+target:
+  # A loan is bad (default=1) if written-off/defaulted OR ever 90+ DPD. Active
+  # loans are excluded (censored). Everything else remaining is good (0).
+  bad_statuses: [Written-Off, Defaulted]
+  dpd_default_threshold: 90 # max_dpd_ever >= this also counts as default
+  exclude_statuses: [Active] # censored / not yet matured
+
+# Feature-engineering settings ----------------------------------------------
+features:
+  dbr:
+    # Debt Burden Ratio = monthly debt repayments / monthly income.
+    # The bureau gives an outstanding *balance*, not a monthly payment, so we
+    # proxy the existing monthly obligation by spreading that balance over this
+    # assumed tenor. See docs/DECISION_LOG.md.
+    assumed_existing_debt_tenor_months: 48
+    # UAE Central Bank caps retail DBR at 50%; at/above this we flag "risky".
+    risky_threshold: 0.50
+
+# Data-quality / cleaning rules --------------------------------------------
+cleaning:
+  # Declared income is monthly AED. Values far outside a plausible band are
+  # treated as data-entry errors and winsorised (capped), not dropped.
+  income_min: 2000
+  income_max: 200000
+  # Applications with no servicing outcome cannot be labelled -> dropped.
+  drop_unlabellable: true
+
+# Validation & modelling ----------------------------------------------------
+validation:
+  # Time-based split: train on older applications, test on the most recent.
+  # Mirrors production, where we always score the future from the past.
+  split_strategy: temporal # temporal | random
+  test_fraction: 0.2
+  cv_folds: 5
+
+model:
+  # Which trained estimator to promote to the serving artifact. Logistic wins
+  # the fair (all-tuned) comparison and is the most interpretable — see §9.
+  primary: logistic_regression # xgboost | random_forest | logistic_regression
+  # Decision threshold on predicted probability (tuned in experiments).
+  decision_threshold: 0.5
+
+# Hyperparameter tuning (Optuna) --------------------------------------------
+# `uv run tune` searches each model's params with time-aware CV and writes the
+# best set per model to params_file; the next `uv run train` picks them up.
+tuning:
+  # All three models are tuned so the comparison in train.py is fair.
+  models: [logistic_regression, random_forest, xgboost]
+  n_trials: 40
+  cv_folds: 4 # TimeSeriesSplit folds (respects time order)
+  metric: pr_auc # optimise PR-AUC (robust under imbalance)
+  params_file: artifacts/best_params.json
+
+mlflow:
+  # SQLite backend (the file store is deprecated in MLflow 3). Runs are written
+  # to mlflow.db in the repo root; browse them with `mlflow ui`.
+  tracking_uri: sqlite:///mlflow.db
+  experiment_name: loan-default-risk
+  # Log each fitted pipeline as an MLflow model (params + metrics are always
+  # logged). The primary model is also registered to the Model Registry and a
+  # moving alias is pointed at the newest version so serving can load it by name.
+  log_models: true
+  registered_model_name: loan-default-risk-model
+  champion_alias: champion
+
+# Serving -------------------------------------------------------------------
+serving:
+  # Where the /predict service loads the model from:
+  #   joblib   -> artifacts/model.joblib  (portable, self-contained; default)
+  #   registry -> MLflow Model Registry   (models:/<name>@<champion_alias>)
+  model_source: joblib

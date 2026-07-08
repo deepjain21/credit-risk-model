@@ -1,0 +1,23 @@
+{
+  "application_date": "2023-06-15",
+  "requested_amount": 150000,
+  "loan_term_months": 36,
+  "declared_income": 14000,
+  "employment_type": "SALARIED",
+  "employer_name": "Employer_0575",
+  "emirate": "DXB",
+  "product_id": "PRD-01",
+  "branch_id": "BR-DXB1",
+  "channel": "Branch",
+  "app_form_version": "v3",
+  "date_of_birth": "1988-04-10",
+  "gender": "M",
+  "nationality_group": "Expat - Asia",
+  "marital_status": "Married",
+  "dependents_count": 2,
+  "bureau_score": 640,
+  "num_inquiries_last_3m": 3,
+  "total_outstanding_debt": 210000,
+  "num_dpd_90_last_12m": 1,
+  "has_long_tenor_loan": 0
+}
