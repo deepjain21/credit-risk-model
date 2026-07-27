@@ -1,7 +1,5 @@
 # Personal-Loan Default-Risk Model
 
-Take-home for the **ML Engineer** role, AI Function, Finance House PJSC.
-
 The task: from seven messy operational extracts of a fictional UAE installment
 lender, build a model that **ranks new personal-loan applicants by default risk**
 using only information available at the point of the lending decision — and
